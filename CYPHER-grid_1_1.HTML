@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trivia Retro: Arcade Legacy - REFORGED</title>
+<style>
+  :root {
+    --color-green: #39FF14;
+    --color-yellow: #FFD700;
+    --color-cyan: #00FFFF;
+    --color-magenta: #FF0266;
+    --color-red: #ff3333;
+    --color-dark: #111;
+  }
+  html, body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #000; color: var(--color-green); font-family: 'VT323', monospace, sans-serif; }
+  body::after { content: " "; display: block; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 4px, 6px 100%; z-index: 100; pointer-events: none; animation: flicker 0.15s infinite; }
+  @keyframes flicker { 0% { opacity: 0.2; } 50% { opacity: 0.5; } 100% { opacity: 0.2; } }
+  .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-evenly; align-items: center; padding: 3vh 5vw; box-sizing: border-box; user-select: none; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; }
+  .screen.visible { opacity: 1; visibility: visible; animation: screenGlitch 0.2s ease-out; }
+  @keyframes screenGlitch { 0% { transform: translate(2px, 2px); opacity: 0.8; } 25% { transform: translate(-2px, 0px); } 50% { transform: translate(0px, -2px) scale(1.01); } 75% { transform: translate(2px, 2px); } 100% { transform: translate(0, 0); opacity: 1; } }
+  .zone-top, .zone-center, .zone-bottom { width: 100%; max-width: 1100px; text-align: center; position: relative; }
+  .zone-center { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  h1.title-logo { font-size: clamp(3rem, 8vh, 5rem); color: var(--color-yellow); animation: neonFlicker 2s infinite alternate; margin: 0 0 2vh 0; }
+  h2 { font-size: clamp(2rem, 5vh, 3.5rem); color: var(--color-green); text-shadow: 0 0 10px var(--color-green); margin: 0 0 1vh 0; }
+  h3 { font-size: clamp(1.8rem, 4vh, 3rem); color: var(--color-green); text-shadow: 0 0 6px var(--color-green); margin: 0; }
+  #progressText { font-size: clamp(1.2rem, 3.5vh, 1.8rem); color: var(--color-yellow); }
+  .typewriter .Typewriter__cursor { color: var(--color-green); font-weight: bold; }
+  .block { background: var(--color-dark); padding: 4vh 3vw; border: 3px solid var(--color-yellow); border-radius: 12px; box-shadow: 0 0 20px var(--color-yellow), inset 0 0 20px #333; width: 100%; }
+  #questionText { font-size: clamp(1.8rem, 4.5vh, 2.8rem); line-height: 1.2; color: var(--color-yellow); text-shadow: 0 0 8px var(--color-yellow); }
+  button { background: #000; color: var(--color-cyan); border: 3px solid var(--color-cyan); padding: 1.5vh 3vw; font-size: clamp(1.5rem, 3.5vh, 2.2rem); cursor: pointer; font-weight: bold; text-transform: uppercase; box-shadow: 0 0 10px var(--color-cyan), 0 0 30px var(--color-cyan); border-radius: 8px; transition: all 0.3s ease; font-family: inherit; }
+  button:hover:not(:disabled) { background: var(--color-cyan); color: #000; box-shadow: 0 0 25px var(--color-cyan), 0 0 60px var(--color-cyan); }
+  button:active:not(:disabled) { transform: scale(0.95); }
+  button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(80%); }
+  .options { display: flex; flex-direction: column; gap: 1.5vh; width: 100%; }
+  .option { background: #222; border: 3px solid var(--color-magenta); color: var(--color-magenta); padding: 1.5vh 3vw; text-align: center; font-size: clamp(1.5rem, 4vh, 2.5rem); border-radius: 8px; box-shadow: 0 0 15px var(--color-magenta); font-weight: 700; transition: all 0.3s ease; text-transform: none; letter-spacing: normal; }
+  .option:hover:not(:disabled) { background: var(--color-magenta); color: #000; transform: scale(1.03); }
+  .option.correct { background: #0a4d0a; border-color: var(--color-green); color: var(--color-green); box-shadow: 0 0 25px var(--color-green); transform: scale(1.03); }
+  .option.incorrect { background: #500e0e; border-color: var(--color-red); color: var(--color-red); animation: shake 0.5s; }
+  .option:disabled.hide { opacity: 0.2; filter: grayscale(100%); pointer-events: none; }
+  @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+  #lifelines { display: flex; justify-content: center; gap: 20px; margin-bottom: 2vh; }
+  .lifeline-btn { font-size: clamp(1.2rem, 3vh, 1.8rem); padding: 1vh 2vw; border-color: var(--color-yellow); color: var(--color-yellow); box-shadow: 0 0 8px var(--color-yellow), 0 0 20px var(--color-yellow); position: relative; }
+  .lifeline-btn .lifeline-count { position: absolute; top: -10px; right: -10px; background: var(--color-magenta); color: #fff; border-radius: 50%; width: 24px; height: 24px; line-height: 24px; font-size: 1rem; text-shadow: none; font-weight: bold; }
+  #marathon-btn { border-color: var(--color-yellow); color: var(--color-yellow); box-shadow: 0 0 10px var(--color-yellow), 0 0 30px var(--color-yellow); animation: neonFlicker 3s infinite alternate; }
+  #points-feedback, #combo-reward-feedback { position: absolute; left: 50%; transform: translateX(-50%); opacity: 0; pointer-events: none; }
+  #points-feedback { top: 50%; font-size: clamp(3rem, 8vh, 6rem); color: var(--color-green); text-shadow: 0 0 15px var(--color-green), 0 0 30px #fff; animation: floatUp 1.5s ease-out forwards; }
+  #combo-reward-feedback { top: 15%; font-size: clamp(1.5rem, 4vh, 2.5rem); color: var(--color-cyan); text-shadow: 0 0 10px var(--color-cyan); animation: floatUp 2s ease-out forwards; }
+  @keyframes floatUp { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; } 100% { transform: translate(-50%, -200%) scale(1.2); opacity: 0; } }
+  #combo-counter.pulse { animation: pulse 0.3s ease; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+  #timer-container { width: 100%; height: 10px; background: #333; border: 2px solid var(--color-cyan); margin-top: 1vh; border-radius: 5px; }
+  #timer-bar { height: 100%; width: 100%; background: var(--color-cyan); border-radius: 2px; transition: width 0.1s linear, background-color 0.5s ease; }
+  #timer-bar.danger { background-color: var(--color-red); }
+  #highScores { padding: 1vh 2vw; border: 2px solid var(--color-cyan); border-radius: 8px; }
+  #highScores h3 { color: var(--color-cyan); margin-bottom: 1vh; font-size: clamp(1.5rem, 3vh, 2rem); }
+  #highScores ol { list-style-type: none; padding: 0; margin: 0; font-size: clamp(1.2rem, 2.5vh, 1.8rem); }
+  #highScores li { display: flex; justify-content: space-between; }
+  #highScores li span:first-child { color: var(--color-yellow); }
+  #highScores li span:last-child { color: var(--color-green); text-shadow: 0 0 5px var(--color-green); }
+
+  /* Player Cards */
+  #playerCardsContainer { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; width: 100%; max-width: 900px; margin-top: 2vh; }
+  .player-card { background: #1a1a1a; border: 3px solid var(--color-cyan); border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 0 10px var(--color-cyan); }
+  .player-card:hover { background: var(--color-cyan); color: #000; transform: scale(1.05); }
+  .player-card .card-name { font-size: clamp(1.8rem, 4vh, 2.5rem); letter-spacing: 2px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+  .player-card .card-score { font-size: clamp(1rem, 2vh, 1.5rem); color: var(--color-yellow); }
+  .player-card:hover .card-score { color: #000; text-shadow: none; }
+  .player-card.new-player { border-style: dashed; }
+  .player-card.new-player .card-name { font-size: clamp(1.5rem, 3vh, 2rem); }
+
+  /* Virtual Keyboard */
+  #nameDisplay { font-size: clamp(2.5rem, 5vh, 4rem); letter-spacing: 5px; color: var(--color-yellow); text-shadow: 0 0 10px var(--color-yellow); margin-bottom: 3vh; border: 2px solid var(--color-green); padding: 10px 20px; min-height: 1.5em; }
+  #virtualKeyboard { display: grid; grid-template-columns: repeat(10, 1fr); gap: 10px; width: 100%; max-width: 900px; }
+  .key { font-size: clamp(1.2rem, 2.5vh, 1.8rem); padding: 15px 5px; background: #222; border: 2px solid var(--color-cyan); color: var(--color-cyan); text-transform: uppercase; }
+  .key.wide { grid-column: span 2; }
+</style>
+</head>
+<body>
+<script src="https://unpkg.com/typewriter-effect@latest/dist/core.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
+<div id="bios" class="screen visible">
+    <div class="zone-center block"><h3 id="biosText" class="typewriter"></h3></div>
+    <div class="zone-bottom" id="bios-prompt" style="visibility: hidden;"><button id="biosContinueButton">PRESS ANY KEY TO CONTINUE</button></div>
+</div>
+
+<div id="welcome" class="screen">
+    <div class="zone-top"><h1 class="title-logo">TRIVIA RETRO<br>ARCADE LEGACY</h1></div>
+    <div class="zone-center">
+        <h2>PLAYER SELECT</h2>
+        <div id="playerCardsContainer"></div>
+    </div>
+    <div class="zone-bottom" id="highScores"></div>
+</div>
+
+<div id="name" class="screen">
+  <div class="zone-top"><h2>ENTER YOUR NAME</h2></div>
+  <div class="zone-center">
+    <div id="nameDisplay"></div>
+    <div id="virtualKeyboard"></div>
+    <div id="name-error" style="color:var(--color-red); margin-top:1rem; visibility:hidden;">NAME ALREADY EXISTS OR IS EMPTY</div>
+  </div>
+</div>
+
+<div id="level" class="screen">
+  <div class="zone-top"><h2 id="level-title"></h2></div>
+  <div class="zone-center block" style="gap: 2vh;">
+    <button class="level-btn" data-level="1">🟨 Historia</button>
+    <button class="level-btn" data-level="2">🟪 Hardware/Software</button>
+    <button class="level-btn" data-level="3">🟥 Internet/Redes</button>
+    <button id="marathon-btn" class="level-btn" data-level="marathon">🏆 MODO MARATÓN 🏆</button>
+  </div>
+  <div class="zone-bottom"><button id="back-to-welcome">CAMBIAR JUGADOR</button></div>
+</div>
+
+<div id="game" class="screen">
+  <div class="zone-top block" id="questionText"></div>
+  <div class="zone-center">
+    <div id="lifelines">
+        <button id="lifeline-5050" class="lifeline-btn">50/50<span id="lifeline-5050-count" class="lifeline-count"></span></button>
+        <button id="lifeline-time" class="lifeline-btn">+10s<span id="lifeline-time-count" class="lifeline-count"></span></button>
+    </div>
+    <div class="options" id="optionButtons"></div>
+    <div id="points-feedback"></div>
+    <div id="combo-reward-feedback"></div>
+  </div>
+  <div class="zone-bottom">
+    <div id="progressText"></div>
+    <div id="timer-container"><div id="timer-bar"></div></div>
+  </div>
+</div>
+
+<div id="end" class="screen">
+  <div class="zone-center block neon"><h2 id="end-title"></h2><h3 id="scoreText"></h3></div>
+  <div class="zone-bottom"><button id="restartButton">VOLVER A EMPEZAR</button></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Definiciones y estado del juego
+    const questions = {
+        1: [ { q: "¿Quién es considerado el 'padre de la computadora' por su Máquina Analítica?", o: ["Alan Turing", "Charles Babbage", "John von Neumann", "Bill Gates"], c: "Charles Babbage" }, { q: "¿Qué empresa lanzó el primer microprocesador comercial, el 4004, en 1971?", o: ["IBM", "AMD", "Intel", "Motorola"], c: "Intel" }, { q: "¿En qué década se creó ARPANET, el precursor de Internet?", o: ["1960s", "1970s", "1980s", "1950s"], c: "1960s" }, { q: "¿Cuál fue el primer lenguaje de programación de alto nivel ampliamente utilizado?", o: ["COBOL", "C", "FORTRAN", "BASIC"], c: "FORTRAN" }, { q: "¿Qué computadora de Apple popularizó la interfaz gráfica de usuario (GUI) en 1984?", o: ["Apple II", "Lisa", "Macintosh", "Apple I"], c: "Macintosh" } ],
+        2: [ { q: "¿Qué componente se conoce como memoria volátil, perdiendo sus datos al apagar el equipo?", o: ["SSD", "HDD", "CPU", "RAM"], c: "RAM" }, { q: "¿Qué significa 'GPU'?", o: ["Unidad de Procesamiento Gráfico", "Unidad de Potencia General", "Guía de Programa Universal", "Generador de Píxeles Único"], c: "Unidad de Procesamiento Gráfico" }, { q: "¿Cuál de estos es un software de sistema y no de aplicación?", o: ["Photoshop", "Windows 11", "Microsoft Word", "Google Chrome"], c: "Windows 11" }, { q: "En un disco duro (HDD), los datos se almacenan en...", o: ["Chips de silicio", "Platos magnéticos", "Cintas ópticas", "Celdas de memoria flash"], c: "Platos magnéticos" } ],
+        3: [ { q: "¿Qué protocolo se usa para el envío de correo electrónico?", o: ["FTP", "HTTP", "SMTP", "POP3"], c: "SMTP" }, { q: "Una dirección IPv4 está compuesta por...", o: ["6 bloques de números", "4 bloques de números", "Letras y números", "Una dirección MAC"], c: "4 bloques de números" }, { q: "¿Qué significa 'DNS'?", o: ["Servidor de Nombres de Dominio", "Sistema de Red Digital", "Seguridad de Datos de Red", "Norma de Señal Distribuida"], c: "Servidor de Nombres de Dominio" }, { q: "¿Qué es un 'phishing'?", o: ["Un tipo de virus", "Un cortafuegos", "Un intento de fraude online", "Una red de pesca digital"], c: "Un intento de fraude online" } ]
+    };
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const audioManager = { sounds: {}, load(name, url, loop = false) { fetch(url).then(res => res.arrayBuffer()).then(buffer => audioCtx.decodeAudioData(buffer)).then(decoded => { this.sounds[name] = { buffer: decoded, loop: loop }; }); }, play(name) { if (!this.sounds[name]) return; audioCtx.resume(); const source = audioCtx.createBufferSource(); source.buffer = this.sounds[name].buffer; source.connect(audioCtx.destination); source.loop = this.sounds[name].loop; source.start(0); if(this.sounds[name].source && !this.sounds[name].loop) { this.sounds[name].source.stop(); } this.sounds[name].source = source; }, stop(name) { if (this.sounds[name] && this.sounds[name].source) { this.sounds[name].source.stop(); delete this.sounds[name].source; } } };
+    audioManager.load('bgm', 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjQ1LjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/82DEAAAAAAAgAAAAAACnuu2AAAAAAAACnuttgQAAANIAAHd3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3-PTEzMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwAA==', true);
+    audioManager.load('click', 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+    audioManager.load('correct', 'data:audio/wav;base64,UklGRkIAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YUYAAAD+9f/45f/a4P/X3v/U3P/P2v/L2f/J1//H1f/F1P/C0//A0v/P0P/Lzf/Izd/Gyc/FxcvFwsrExMPDwMLCwcLCwcLBwcHBwcHBwMDBwMDAv7+/////v7+/vr6+vr29vb29vby8vLy8vLy7u7u7u7u6urq6urq6urq5ubm5ubm5ubm4uLi4uLi4uLi4uLi3t7e3t7e3t7e2tra2tra2traysrKysrKysrKxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsbGxsb-');
+    audioManager.load('incorrect', 'data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YUYAAADf3d/c3N7b2tza2dvY2NjX19bW1tbV1dTU09PT0tLR0dHR0NDPz8/Pz8/Ozs7Ozs3NzczMzczMy8vLy8vLycnJycnJyMjIyMjIx8fHx8fHxMTEw8PDwsLCwsLCwMDAv7+/v7+/v76+vr6+vr29vb29vb29vby8vLy8vLy8vLy8u7u7u7u7u7u7u7q6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq-');
+    
+    const TIME_PER_QUESTION = 15;
+    const TIME_BONUS = 10;
+    const MAX_PROFILES = 4;
+    const MAX_NAME_LENGTH = 10;
+    let gameState = {};
+    let currentNameEntry = "";
+    
+    const ui = {
+        screens: { bios: document.getElementById('bios'), welcome: document.getElementById('welcome'), name: document.getElementById('name'), level: document.getElementById('level'), game: document.getElementById('game'), end: document.getElementById('end') },
+        biosText: document.getElementById('biosText'), biosPrompt: document.getElementById('bios-prompt'),
+        playerCardsContainer: document.getElementById('playerCardsContainer'),
+        nameDisplay: document.getElementById('nameDisplay'), virtualKeyboard: document.getElementById('virtualKeyboard'), nameError: document.getElementById('name-error'),
+        levelTitle: document.getElementById('level-title'),
+        questionText: document.getElementById('questionText'), optionButtons: document.getElementById('optionButtons'),
+        lifeline5050Btn: document.getElementById('lifeline-5050'), lifelineTimeBtn: document.getElementById('lifeline-time'),
+        lifeline5050Count: document.getElementById('lifeline-5050-count'), lifelineTimeCount: document.getElementById('lifeline-time-count'),
+        progressText: document.getElementById('progressText'), timerBar: document.getElementById('timer-bar'),
+        pointsFeedback: document.getElementById('points-feedback'), comboRewardFeedback: document.getElementById('combo-reward-feedback'),
+        endTitle: document.getElementById('end-title'), scoreText: document.getElementById('scoreText'),
+        highScores: document.getElementById('highScores')
+    };
+    
+    // --- Profile & Score Management ---
+    function getProfiles() { return JSON.parse(localStorage.getItem('triviaPlayerProfiles')) || []; }
+    function saveProfiles(profiles) { localStorage.setItem('triviaPlayerProfiles', JSON.stringify(profiles)); }
+    function getHighScores() { return JSON.parse(localStorage.getItem('triviaHighScores')) || []; }
+    function saveHighScore(name, score) { const scores = getHighScores(); scores.push({ name, score }); scores.sort((a, b) => b.score - a.score); localStorage.setItem('triviaHighScores', JSON.stringify(scores.slice(0, 5))); }
+    
+    function resetGameState() {
+        gameState = {
+            playerProfile: null, deck: [], currentQuestionIndex: 0, score: 0, timerId: null, timeLeft: 0,
+            isMarathonMode: false, comboCounter: 1, maxCombo: 1,
+            lifelines: { fiftyFifty: 1, addTime: 1 }
+        };
+    }
+
+    // --- UI & Flow ---
+    function showScreen(id) { Object.values(ui.screens).forEach(s => s.classList.remove('visible')); ui.screens[id].classList.add('visible'); }
+    function displayPlayerCards() {
+        const profiles = getProfiles();
+        ui.playerCardsContainer.innerHTML = '';
+        profiles.forEach(profile => {
+            const card = document.createElement('div');
+            card.className = 'player-card';
+            card.innerHTML = `<div class="card-name">${profile.name}</div><div class="card-score">RECORD: ${String(profile.highScore).padStart(6, '0')}</div>`;
+            card.onclick = () => selectPlayer(profile);
+            ui.playerCardsContainer.appendChild(card);
+        });
+        if (profiles.length < MAX_PROFILES) {
+            const newCard = document.createElement('div');
+            newCard.className = 'player-card new-player';
+            newCard.innerHTML = `<div class="card-name">NUEVO JUGADOR</div><div class="card-score">CREAR TARJETA</div>`;
+            newCard.onclick = () => showNameEntry();
+            ui.playerCardsContainer.appendChild(newCard);
+        }
+    }
+    
+    function displayHighScores() { const scores = getHighScores(); if (scores.length === 0) { ui.highScores.style.display = 'none'; return; } ui.highScores.style.display = 'block'; let html = `<h3>🏆 MEJORES PUNTAJES 🏆</h3><ol>`; scores.forEach(s => { html += `<li><span>${s.name.padEnd(11, '.')}</span><span>${String(s.score).padStart(6, '0')}</span></li>`; }); html += `</ol>`; ui.highScores.innerHTML = html; }
+
+    function selectPlayer(profile) {
+        audioManager.play('click');
+        resetGameState();
+        gameState.playerProfile = profile;
+        ui.levelTitle.innerText = `SELECT MODE, ${profile.name}`;
+        showScreen('level');
+    }
+
+    // --- Virtual Keyboard Logic ---
+    function showNameEntry() { audioManager.play('click'); currentNameEntry = ""; updateNameDisplay(); ui.nameError.style.visibility = 'hidden'; showScreen('name'); }
+    function updateNameDisplay() { ui.nameDisplay.textContent = currentNameEntry.padEnd(MAX_NAME_LENGTH, '_'); }
+    function handleKey(key) {
+        audioManager.play('click');
+        ui.nameError.style.visibility = 'hidden';
+        if (key === 'BKSP') {
+            currentNameEntry = currentNameEntry.slice(0, -1);
+        } else if (key === 'END') {
+            const newName = currentNameEntry.trim().toUpperCase();
+            if (newName.length === 0) { ui.nameError.style.visibility = 'visible'; return; }
+            const profiles = getProfiles();
+            if (profiles.some(p => p.name === newName)) { ui.nameError.style.visibility = 'visible'; } 
+            else { const newProfile = { name: newName, highScore: 0 }; profiles.push(newProfile); saveProfiles(profiles); selectPlayer(newProfile); }
+        } else {
+            if (currentNameEntry.length < MAX_NAME_LENGTH) currentNameEntry += key;
+        }
+        updateNameDisplay();
+    }
+    function createKeyboard() {
+        'QWERTYUIOPASDFGHJKLZXCVBNM'.split('').forEach(key => { const btn = document.createElement('button'); btn.className = 'key'; btn.textContent = key; btn.onclick = () => handleKey(key); ui.virtualKeyboard.appendChild(btn); });
+        const bksp = document.createElement('button'); bksp.className = 'key wide'; bksp.textContent = 'BKSP'; bksp.onclick = () => handleKey('BKSP');
+        const end = document.createElement('button'); end.className = 'key wide'; end.textContent = 'END'; end.onclick = () => handleKey('END');
+        ui.virtualKeyboard.appendChild(bksp); ui.virtualKeyboard.appendChild(end);
+    }
+    
+    // --- Game Lifecycle ---
+    function initializeApp() {
+        document.getElementById('biosContinueButton').addEventListener('click', () => { enterFullscreen(); audioManager.play('bgm'); displayPlayerCards(); displayHighScores(); showScreen('welcome'); });
+        document.getElementById('back-to-welcome').addEventListener('click', () => { audioManager.play('click'); displayPlayerCards(); showScreen('welcome'); });
+        document.querySelectorAll('.level-btn').forEach(btn => btn.addEventListener('click', () => startGame(btn.dataset.level)));
+        document.getElementById('restartButton').addEventListener('click', () => { audioManager.play('click'); displayPlayerCards(); showScreen('welcome'); });
+        ui.lifeline5050Btn.addEventListener('click', useFiftyFifty);
+        ui.lifelineTimeBtn.addEventListener('click', useAddTime);
+        createKeyboard();
+        const typewriter = new Typewriter(ui.biosText, { loop: false, delay: 40 });
+        typewriter.typeString('PRO-GEN SYSTEMS BIOS...<br>')
+          .pauseFor(300).typeString('MEMORY CHECK...<br>')
+          .pauseFor(300).typeString('LOADING ARCADE OS...<br>')
+          .pauseFor(500).typeString('READY.')
+          .callFunction(() => { ui.biosPrompt.style.visibility = 'visible'; })
+          .start();
+    }
+
+    function enterFullscreen() { if (document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen().catch(err => console.log(`FS Error: ${err.message}`)); } }
+    
+    function startGame(level) {
+        audioManager.play('click'); resetGameState.isMarathonMode = level === 'marathon'; gameState.deck = [];
+        if (gameState.isMarathonMode) { gameState.deck = Object.values(questions).flat().sort(() => Math.random() - 0.5); } 
+        else { const levelQuestions = [...questions[level]]; const count = { '1': 5, '2': 7, '3': 10 }[level]; while (gameState.deck.length < count && levelQuestions.length > 0) { gameState.deck.push(levelQuestions.splice(Math.floor(Math.random() * levelQuestions.length), 1)[0]); } }
+        gameState.currentQuestionIndex = 0; gameState.score = 0; gameState.comboCounter = 1; gameState.maxCombo = 1;
+        gameState.lifelines = { fiftyFifty: 1, addTime: 1 };
+        showScreen('game'); showQuestion();
+    }
+    
+    function showQuestion() {
+        let isGameOver = !gameState.isMarathonMode && gameState.currentQuestionIndex >= gameState.deck.length;
+        if (isGameOver) { endGame(); return; }
+        const p = gameState.deck[gameState.currentQuestionIndex];
+        ui.questionText.innerText = p.q; ui.optionButtons.innerHTML = '';
+        [...p.o].sort(() => Math.random() - 0.5).forEach(op => { const btn = document.createElement('button'); btn.className = 'option'; btn.innerText = op; btn.onclick = () => checkAnswer(op, p.c, btn); ui.optionButtons.appendChild(btn); });
+        updateProgressText(); updateLifelineUI(); startTimer();
+    }
+
+    function checkAnswer(selectedOption, correctOption, button) {
+        clearInterval(gameState.timerId);
+        let wasCorrect = selectedOption === correctOption;
+        
+        document.querySelectorAll('.option').forEach(btn => { btn.disabled = true; if (btn.innerText === correctOption) btn.classList.add('correct'); });
+
+        if (wasCorrect) {
+            const pointsEarned = (100 + (gameState.timeLeft * 75)) * gameState.comboCounter;
+            gameState.score += pointsEarned;
+            showFeedback(ui.pointsFeedback, `+${pointsEarned}`);
+            gameState.comboCounter++; gameState.maxCombo = Math.max(gameState.maxCombo, gameState.comboCounter);
+            button.classList.add('correct'); audioManager.play('correct');
+            if (gameState.comboCounter > 1 && (gameState.comboCounter - 1) % 5 === 0) { gameState.lifelines.fiftyFifty++; updateLifelineUI(); showFeedback(ui.comboRewardFeedback, '¡COMBO REWARD! +1 50/50'); }
+        } else {
+            gameState.comboCounter = 1;
+            if (button) button.classList.add('incorrect');
+            audioManager.play('incorrect');
+        }
+        
+        updateProgressText();
+        const comboEl = document.getElementById('combo-counter');
+        if(comboEl) comboEl.classList.add('pulse');
+
+        const nextAction = () => {
+            if (gameState.isMarathonMode && !wasCorrect) { endGame(); }
+            else { gameState.currentQuestionIndex++; showQuestion(); }
+        };
+        setTimeout(nextAction, 2000);
+    }
+
+    function endGame() {
+        audioManager.stop('bgm');
+        if (gameState.playerProfile) {
+            saveHighScore(gameState.playerProfile.name, gameState.score);
+            if (gameState.score > gameState.playerProfile.highScore) {
+                gameState.playerProfile.highScore = gameState.score;
+                const profiles = getProfiles();
+                const profileIndex = profiles.findIndex(p => p.name === gameState.playerProfile.name);
+                if (profileIndex > -1) { profiles[profileIndex] = gameState.playerProfile; saveProfiles(profiles); }
+            }
+        }
+        let endMessage;
+        if (gameState.isMarathonMode) { ui.endTitle.innerText = "¡FIN DE LA RACHA!"; endMessage = `${gameState.playerProfile.name}, tu puntaje final: ${String(gameState.score).padStart(6, '0')}<br>¡Combo máximo: x${gameState.maxCombo -1}!`; } 
+        else { ui.endTitle.innerText = "¡JUEGO TERMINADO!"; endMessage = `${gameState.playerProfile.name}, tu puntaje final: ${String(gameState.score).padStart(6, '0')}`; }
+        ui.scoreText.innerHTML = endMessage;
+        showScreen('end');
+    }
+    
+    // --- Shared Logic ---
+    function showFeedback(element, text) { element.innerText = text; element.style.animation = 'none'; void element.offsetWidth; element.style.animation = ''; }
+    function updateProgressText() { const progress = gameState.isMarathonMode ? `Pregunta ${gameState.currentQuestionIndex + 1}` : `Pregunta ${gameState.currentQuestionIndex + 1}/${gameState.deck.length}`; ui.progressText.innerHTML = `${progress} | Score: ${String(gameState.score).padStart(6, '0')} | Combo: <span id="combo-counter">x${gameState.comboCounter}</span>`; }
+    function updateLifelineUI() { ui.lifeline5050Count.innerText = gameState.lifelines.fiftyFifty; ui.lifelineTimeCount.innerText = gameState.lifelines.addTime; ui.lifeline5050Btn.disabled = gameState.lifelines.fiftyFifty <= 0; ui.lifelineTimeBtn.disabled = gameState.lifelines.addTime <= 0; }
+    function startTimer() { clearInterval(gameState.timerId); gameState.timeLeft = TIME_PER_QUESTION; ui.timerBar.classList.remove('danger'); ui.timerBar.style.transition = 'none'; ui.timerBar.style.width = '100%'; void ui.timerBar.offsetWidth; ui.timerBar.style.transition = `width ${TIME_PER_QUESTION}s linear, background-color 0.5s ease`; ui.timerBar.style.width = '0%'; gameState.timerId = setInterval(timerTick, 1000); }
+    function timerTick() { gameState.timeLeft--; if (gameState.timeLeft <= 5) { ui.timerBar.classList.add('danger'); } if (gameState.timeLeft <= 0) { checkAnswer(null, gameState.deck[gameState.currentQuestionIndex].c, null); } }
+    function useFiftyFifty() { if (gameState.lifelines.fiftyFifty <= 0) return; audioManager.play('click'); gameState.lifelines.fiftyFifty--; updateLifelineUI(); const p = gameState.deck[gameState.currentQuestionIndex]; const wrongOptions = Array.from(ui.optionButtons.children).filter(btn => btn.innerText !== p.c); wrongOptions.sort(() => Math.random() - 0.5).slice(0, 2).forEach(btn => { btn.classList.add('hide'); btn.disabled = true; }); }
+    function useAddTime() { if (gameState.lifelines.addTime <= 0) return; audioManager.play('click'); gameState.lifelines.addTime--; updateLifelineUI(); clearInterval(gameState.timerId); gameState.timeLeft += TIME_BONUS; const totalTime = gameState.timeLeft; ui.timerBar.style.transition = 'none'; ui.timerBar.style.width = `${(gameState.timeLeft / totalTime) * 100}%`; void ui.timerBar.offsetWidth; ui.timerBar.style.transition = `width ${gameState.timeLeft}s linear, background-color 0.5s ease`; ui.timerBar.style.width = '0%'; gameState.timerId = setInterval(timerTick, 1000); }
+
+    // Kick off the whole process
+    initializeApp();
+});
+</script>
+</body>
+</html>
